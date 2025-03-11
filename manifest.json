@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Kintone Helper",
+  "name": "Kintone Task Helper",
   "version": "1.0.0",
-  "description": "Chrome extension with side panel for Kintone",
+  "description": "Chrome extension with side panel for Kintone task management",
   "background": {
     "service_worker": "assets/background.js",
     "type": "module"
@@ -11,6 +11,7 @@
     "default_path": "index.html"
   },
   "permissions": ["sidePanel", "storage"],
+  "host_permissions": ["https://*.kintone.com/*", "https://*.cybozu.com/*"],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -18,7 +19,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://*.kintone.com/k/*", "https://*.cybozu.com/k/*"],
+      "matches": ["https://*.kintone.com/*", "https://*.cybozu.com/*"],
       "js": ["assets/content.js"]
     }
   ],

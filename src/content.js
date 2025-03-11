@@ -1,9 +1,7 @@
 // src/content.js
+console.log('Kintone Helper Extension: Content script loaded!');
 
-// This script runs in the context of the web page (Kintone/Cybozu)
-console.log('Kintone Helper Extension: Content script loaded');
-
-// Helper function to wait for an element to appear in the DOM
+// Helper function to wait for elements to appear in the DOM
 function waitForElement(selector, timeout = 10000) {
   return new Promise((resolve, reject) => {
     if (document.querySelector(selector)) {
@@ -22,7 +20,6 @@ function waitForElement(selector, timeout = 10000) {
       subtree: true
     });
     
-    // Set timeout
     setTimeout(() => {
       observer.disconnect();
       reject(new Error(`Timeout waiting for element: ${selector}`));
@@ -30,61 +27,115 @@ function waitForElement(selector, timeout = 10000) {
   });
 }
 
-// Initialize when the DOM is fully loaded
-function initializeExtension() {
-  // Check if we're on a Kintone/Cybozu page
-  if (window.location.hostname.includes('kintone.com') || 
-      window.location.hostname.includes('cybozu.com')) {
+// Function to add task buttons to notifications
+function addButtonsToNotifications() {
+  console.log('Looking for notification elements...');
+  
+  // Kintone often uses data-testid attributes
+  const notificationItems = document.querySelectorAll('[data-testid="NotificationItem"]');
+  console.log(`Found ${notificationItems.length} notification items`);
+  
+  notificationItems.forEach((item, index) => {
+    // Check if we already added our button
+    if (item.querySelector('.kintone-task-button')) {
+      return;
+    }
     
-    // Example: Add a button to notifications when they appear
-    waitForElement('.notification-element-selector')
-      .then(notificationElement => {
-        // Add your button or other modifications here
-        console.log('Found notification element:', notificationElement);
-        
-        // Example of adding a button (you'll need to adjust selectors/code)
-        // addButtonToNotification(notificationElement);
-      })
-      .catch(error => {
-        console.log('Error finding notification element:', error);
+    // Find the actions container
+    const actionsContainer = item.querySelector('._actions_z5sn9_117');
+    if (!actionsContainer) {
+      console.log(`Actions container not found for notification ${index}`);
+      return;
+    }
+    
+    // Create our button
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'sc-jBIHhB bKWYSS__container';
+    
+    const button = document.createElement('button');
+    button.className = 'sc-jBIHhB bKWYSS sc-jBIHhB bKWYSS__large kintone-task-button';
+    button.title = 'Register as Task';
+    button.type = 'button';
+    
+    button.addEventListener('click', (event) => {
+      event.stopPropagation(); // Prevent notification from opening
+      console.log('Task button clicked', item);
+      
+      // Extract notification data
+      const title = item.querySelector('.notification-title')?.textContent || 'New Task';
+      const content = item.querySelector('.notification-content')?.textContent || '';
+      
+      // Send message to the side panel with the notification data
+      chrome.runtime.sendMessage({
+        type: 'REGISTER_TASK',
+        data: { title, content, source: 'notification' }
       });
-  }
+    });
+    
+    // SVG icon for the task button
+    const svgHtml = `
+      <span role="img" aria-label="Register as Task">
+        <span aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 32 32">
+            <path fill="#666666" d="M26 0H6C4.9 0 4 .9 4 2v28c0 1.1.9 2 2 2h20c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2zM14 22.5L9 17.5l2.1-2.1 2.9 2.9 6.9-6.9L23 13.5l-9 9z"/>
+          </svg>
+        </span>
+      </span>
+    `;
+    
+    button.innerHTML = svgHtml;
+    buttonContainer.appendChild(button);
+    actionsContainer.appendChild(buttonContainer);
+    console.log(`Added task button to notification ${index}`);
+  });
 }
 
-// Function to add a button to a notification element
-function addButtonToNotification(notificationElement) {
-  // Your code to create and add a button goes here
-  // For example:
-  const button = document.createElement('button');
-  button.textContent = 'Convert to Task';
-  button.className = 'task-convert-button';
-  button.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent notification from opening
-    
-    // Get notification data
-    const notificationData = {
-      id: notificationElement.dataset.id,
-      title: notificationElement.querySelector('.notification-title')?.textContent,
-      // Add other data you need
-    };
-    
-    console.log('Converting to task:', notificationData);
-    
-    // Here you would typically:
-    // 1. Send this data to your background script or side panel
-    // 2. Or directly make an API call to create a task in Kintone
-  });
+// Initialize the extension
+function initialize() {
+  console.log('Initializing extension on:', window.location.href);
   
-  // Find where to append the button
-  const actionArea = notificationElement.querySelector('.notification-actions');
-  if (actionArea) {
-    actionArea.appendChild(button);
+  // Check if we're on a notification page
+  if (window.location.href.includes('/k/#/ntf/')) {
+    console.log('On notification page, setting up...');
+    
+    // Initial check
+    addButtonsToNotifications();
+    
+    // Set up observer for dynamic content
+    const observer = new MutationObserver(() => {
+      addButtonsToNotifications();
+    });
+    
+    // Start observing the main container
+    waitForElement('.gaia-argoui-notification-list')
+      .then(container => {
+        observer.observe(container, {
+          childList: true,
+          subtree: true
+        });
+        console.log('Observer set up for notifications container');
+      })
+      .catch(error => {
+        console.error('Error finding notifications container:', error);
+      });
   }
 }
 
 // Start the extension
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeExtension);
+  document.addEventListener('DOMContentLoaded', initialize);
 } else {
-  initializeExtension();
+  initialize();
 }
+
+// Also run on URL changes (for single-page apps)
+let lastUrl = location.href; 
+new MutationObserver(() => {
+  const url = location.href;
+  if (url !== lastUrl) {
+    lastUrl = url;
+    initialize();
+  }
+}).observe(document, {subtree: true, childList: true});
+
+console.log('Kintone Helper Extension: Setup complete');

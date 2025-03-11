@@ -13,6 +13,11 @@ export default defineConfig({
         background: resolve(__dirname, 'src/background.js'),
         content: resolve(__dirname, 'src/content.js'),
         passCybozuData: resolve(__dirname, 'src/pass-cybozu-data.js')
+      },
+      output: {
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]'
       }
     }
   }

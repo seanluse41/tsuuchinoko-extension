@@ -1,6 +1,7 @@
 import './app.css'
 import App from './App.svelte'
 import { mount } from 'svelte'
+import './lib/i18n';
 
 const target = document.getElementById('app')
 if (!target) {
