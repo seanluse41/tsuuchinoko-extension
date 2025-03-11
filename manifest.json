@@ -1,17 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Svelte Side Panel Extension",
+  "name": "Kintone Helper",
   "version": "1.0.0",
-  "description": "A Chrome extension with side panel built using Svelte",
+  "description": "Chrome extension with side panel for Kintone",
+  "background": {
+    "service_worker": "assets/background.js",
+    "type": "module"
+  },
   "side_panel": {
     "default_path": "index.html"
   },
-  "permissions": [
-    "storage",
-    "tabs",
-    "activeTab",
-    "sidePanel"
-  ],
+  "permissions": ["sidePanel", "storage"],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -19,28 +18,14 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://*.kintone.com/k/*",
-        "https://*.cybozu.com/k/*"
-      ],
-      "js": [
-        "build/content.js"
-      ]
+      "matches": ["https://*.kintone.com/k/*", "https://*.cybozu.com/k/*"],
+      "js": ["assets/content.js"]
     }
-  ],
-  "host_permissions": [
-    "https://*.kintone.com/*",
-    "https://*.cybozu.com/*"
   ],
   "web_accessible_resources": [
     {
-      "resources": [
-        "pass-cybozu-data.js"
-      ],
-      "matches": [
-        "https://*.kintone.com/*",
-        "https://*.cybozu.com/*"
-      ]
+      "resources": ["assets/passCybozuData.js"],
+      "matches": ["https://*.kintone.com/*", "https://*.cybozu.com/*"]
     }
   ]
 }
